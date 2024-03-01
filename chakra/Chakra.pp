@@ -40,7 +40,11 @@ interface
 
   function Undefined: TJsValue;
 
+  function CreateArray(ItemCount: Integer): TJsValue;
+  function GetArrayItem(ArrayValue: TJsValue; ItemIndex: Integer): TJsValue;
+  procedure SetArrayItem(ArrayValue: TJsValue; ItemIndex: Integer; Value: TJsValue);
 
+  function JsTypeName(Value: TJsValueType): WideString;
 
 implementation
 
@@ -220,4 +224,39 @@ implementation
   begin
     TryChakraAPI('JsGetUndefinedValue', JsGetUndefinedValue(Result));
   end;
+
+  function JsTypeName;
+  begin
+    case Value of
+      JsUndefined: Result := 'Undefined';
+      JsNull: Result := 'Null';
+      JsNumber: Result := 'Number';
+      JsString: Result := 'String';
+      JsBoolean: Result := 'Boolean';
+      JsObject: Result := 'Object';
+      JsFunction: Result := 'Function';
+      JsError: Result := 'Error';
+      JsArray: Result := 'Array';
+      JsSymbol: Result := 'Symbol';
+      JsArrayBuffer: Result := 'ArrayBuffer';
+      JsTypedArray: Result := 'TypedArray';
+      JsDataView: Result := 'DataView';
+    end;
+  end;
+
+  function CreateArray;
+  begin
+    TryChakraAPI('JsCreateArray', JsCreateArray(ItemCount, Result));
+  end;
+
+  function GetArrayItem;
+  begin
+    TryChakraAPI('JsGetIndexedProperty', JsGetIndexedProperty(ArrayValue, IntAsJsNumber(ItemIndex), Result));
+  end;
+
+  procedure SetArrayItem;
+  begin
+    TryChakraAPI('JsSetIndexedProperty', JsSetIndexedProperty(ArrayValue, IntAsJsNumber(ItemIndex), Value));
+  end;
+
 end.

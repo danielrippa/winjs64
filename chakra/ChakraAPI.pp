@@ -49,6 +49,11 @@ interface
 
   function JsGetUndefinedValue(out UndefinedValue: TJsValue): TJsErrorCode; stdcall; external dll;
 
+  function JsCreateArray(ItemCount: Cardinal; out ArrayValue: TJsValue): TJsErrorCode; stdcall; external dll;
+  function JsGetIndexedProperty(ArrayValue, Index: TJsValue; out Value: TJsValue): TjsErrorCode; stdcall; external dll;
+  function JsSetIndexedProperty(ArrayValue, ItemIndex, Value: TJsValue): TJsErrorCode; stdcall; external dll;
+
+
   procedure TryChakraAPI(aFunctionName: WideString; aErrorCode: TJsErrorCode);
 
 implementation
