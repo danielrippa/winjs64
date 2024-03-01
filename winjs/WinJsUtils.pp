@@ -10,10 +10,16 @@ interface
 
   function ExtractFileNameWithoutExt(aFilePath: WideString): WideString;
 
+  function ReadUnicodeTextFileContent(aFilePath: WideString): WideString;
+
+  function LoadScript(aFilePath: WideString): TJsValue;
+  function LoadLibrary(aFilePath: WideString): THandle;
+  function LoadWasm(aFilePath: WideString): TJsValue;
+
 implementation
 
   uses
-    WinJsRuntime, Chakra, SysUtils, ChakraErr, StrUtils, Classes, WinJsErr;
+    WinJsRuntime, Chakra, SysUtils, ChakraErr, StrUtils, Classes, WinJsErr, DynLibs, Windows;
 
   function ExtractFileNameWithoutExt;
   var
@@ -32,7 +38,7 @@ implementation
     WriteLn(StdErr, WideFormat(aFormat, aArgs));
   end;
 
-  function ReadUnicodeTextFileContent(aFilePath: WideString): WideString;
+  function ReadUnicodeTextFileContent;
   var
     FileStream: TFileStream;
     S: UTF8String;
@@ -58,22 +64,54 @@ implementation
 
   end;
 
-  function RunJsFile;
+  function LoadScript;
   var
     ScriptName: WideString;
     ScriptSource: WideString;
+  begin
+    ScriptName := ExtractFileNameWithoutExt(aFilePath);
+    ScriptSource := ReadUnicodeTextFileContent(aFilePath);
 
+    Result := Runtime.EvalScriptSource(ScriptName, ScriptSource);
+  end;
+
+  function LoadLibrary;
+  var
+    Handle: THandle;
+    LastError: DWORD;
+    ErrorMessage: String;
+    Path: UnicodeString;
+  begin
+
+    Path := aFilePath;
+
+    Handle := DynLibs.LoadLibrary(Path);
+
+    if Handle = 0 then begin
+      LastError := GetLastError();
+      ErrorMessage := SysErrorMessage(LastError);
+
+      raise Exception.CreateFmt('%s ''%s''', [ErrorMessage, aFilePath]);
+    end;
+
+    Result := Handle;
+  end;
+
+  function LoadWasm;
+  begin
+    Result := StringAsJsString(ReadUnicodeTextFileContent(aFilePath));
+  end;
+
+  function RunJsFile;
+  var
     ErrorLevel: TJsValue;
   begin
 
     Result := 0;
 
-    ScriptName := ExtractFileNameWithoutExt(aScriptFilePath);
-    ScriptSource := ReadUnicodeTextFileContent(aScriptFilePath);
-
     try
 
-      Runtime.EvalScriptSource(ScriptName, ScriptSource);
+      LoadScript(aScriptFilePath);
 
       ErrorLevel := GetProperty(Runtime.Global, 'errorLevel');
 
