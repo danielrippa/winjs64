@@ -12,7 +12,7 @@ interface
 
   function ReadUnicodeTextFileContent(aFilePath: WideString): WideString;
 
-  function LoadScript(aFilePath: WideString): TJsValue;
+  function LoadScript(aFilePath, aScriptName: WideString): TJsValue;
   function LoadLibrary(aFilePath: WideString): THandle;
   function LoadWasm(aFilePath: WideString): TJsValue;
 
@@ -66,13 +66,16 @@ implementation
 
   function LoadScript;
   var
-    ScriptName: WideString;
     ScriptSource: WideString;
   begin
-    ScriptName := ExtractFileNameWithoutExt(aFilePath);
+
+    if aScriptName = '' then begin
+      aScriptName := ExtractFileNameWithoutExt(aFilePath);
+    end;
+
     ScriptSource := ReadUnicodeTextFileContent(aFilePath);
 
-    Result := Runtime.EvalScriptSource(ScriptName, ScriptSource);
+    Result := Runtime.EvalScriptSource(aScriptName, ScriptSource);
   end;
 
   function LoadLibrary;
@@ -111,7 +114,7 @@ implementation
 
     try
 
-      LoadScript(aScriptFilePath);
+      LoadScript(aScriptFilePath, aScriptFilePath);
 
       ErrorLevel := GetProperty(Runtime.Global, 'errorLevel');
 
@@ -132,8 +135,9 @@ implementation
 
       on E: EChakraScriptError do begin
         with E.ScriptError do begin
-          WriteErrLn('[%s] %s.', [E.ClassName, E.Message]);
-          WriteErrLn('Script: "%s" (Line: %d, Column: %d)', [ ScriptName, Line + 1, Column ]);
+          WriteErrLn('[%s] %s.', [ E.ClassName, E.Message ]);
+          WriteErrLn('Script: "%s"', [ ScriptName ]);
+          WriteErrLn('Line: %d, Column: %d)', [ Line + 1, Column ]);
           WriteErrLn('Source: %s', [Source]);
 
           Result := ErrorCode;

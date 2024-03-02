@@ -34,10 +34,20 @@ implementation
   var WinJsLibraryHandles: array of TLibHandle;
 
   function WinJsLoadScript(Args: PJsValue; ArgCount: Word): TJsValue;
+  var
+    aFilePath, aScriptName: WideString;
   begin
-    CheckParams('loadScript', Args, ArgCount, [jsString], 1);
+    CheckParams('loadScript', Args, ArgCount, [jsString, jsString], 1);
 
-    Result := LoadScript(JsStringAsString(Args^));
+    aFilePath := JsStringAsString(Args^); Inc(Args);
+
+    aScriptName := '';
+
+    if ArgCount > 1 then begin
+      aScriptName := JsStringAsString(Args^);
+    end;
+
+    Result := LoadScript(aFilePath, aScriptName);
   end;
 
   function LoadWinJsLibrary(FilePath: WideString): TJsValue;
