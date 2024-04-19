@@ -32,15 +32,18 @@ interface
       jsDataView
     );
 
-    TJsError = (
+    TJsErrorCode = (
       jecNoError = 0,
 
       jecUsageError = $10000,
         jecInvalidArgument,
         jecNullArgument,
 
+      jecEngineError = $20000,
+        jecOutOfMemory,
+
       jecScriptError = $30000,
-        jecOutOfMemory
+        jecScriptException
     );
 
     TJsBackgroundItemProc = procedure(CallbackState: Pointer); stdcall;
@@ -59,7 +62,6 @@ interface
     TJsFunctionFunc = function(Args: PJsValue; ArgCount: Word): TJsValue;
 
     TJsNativeFunc = function(Callee: TJsValue; IsConstructCall: ByteBool; Args: PJsValue; ArgCount: Word; CallbackState: Pointer): TJsValue; stdcall;
-
 
 implementation
 

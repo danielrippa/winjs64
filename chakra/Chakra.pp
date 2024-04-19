@@ -9,14 +9,24 @@ interface
 
   function GetGlobalObject: TJsValue;
 
-  function GetProperty(Instance: TJsValue; PropertyName: WideString): TJsValue;
+  function Undefined: TJsValue;
 
-  function GetStringProperty(Instance: TJsValue; PropertyName: WideString): WideString;
-  function GetIntProperty(Instance: TJsValue; PropertyName: WideString): Integer;
-
-  procedure SetProperty(Instance: TJsValue; PropertyName: WideString; Value: TJsValue);
+  function CreateObject: TJsValue;
 
   procedure SetFunction(Instance: TJsValue; FunctionName: WideString; Callback: TJsFunctionFunc);
+
+  function GetProperty(Instance: TJsValue; PropertyName: WideString): TJsValue;
+  procedure SetProperty(Instance: TJsValue; PropertyName: WideString; Value: TJsValue);
+
+  function GetIntProperty(Instance: TJsValue; PropertyName: WideString): Integer;
+  function GetStrProperty(Instance: TJsValue; PropertyName: WideString): WideString;
+
+  function CreateArray(ItemCount: Integer): TJsValue;
+
+  function GetArrayItem(ArrayValue: TJsValue; ItemIndex: Integer): TJsValue;
+  procedure SetArrayItem(ArrayValue: TJsValue; ItemIndex: Integer; Value: TJsValue);
+
+  function GetValueType(Value: TJsValue): TJsValueType;
 
   function JsValueAsJsString(Value: TJsValue): TJsValue;
   function JsValueAsString(Value: TJsValue): WideString;
@@ -30,70 +40,28 @@ interface
   function BooleanAsJsBoolean(Value: Boolean): TJsValue;
   function JsBooleanAsBoolean(Value: TJsValue): Boolean;
 
-  function GetValueType(Value: TJsValue): TJsValueType;
-
-  function CallFunction(Func: TJsValue; Args: PJsValue; ArgCount: Word): TJsValue;
-
-  function CreateObject: TJsValue;
-
-  function EvalScriptSource(SourceContext: UIntPtr; ScriptSource, ScriptName: WideString): TJsValue;
-
-  function Undefined: TJsValue;
-
-  function CreateArray(ItemCount: Integer): TJsValue;
-  function GetArrayItem(ArrayValue: TJsValue; ItemIndex: Integer): TJsValue;
-  procedure SetArrayItem(ArrayValue: TJsValue; ItemIndex: Integer; Value: TJsValue);
+  function Run(SourceContext: UIntPtr; ScriptSource, ScriptName: WideString): TJsValue;
 
   function JsTypeName(Value: TJsValueType): WideString;
 
 implementation
 
   uses
-    ChakraAPI;
+    ChakraAPI, ChakraError;
 
   function GetGlobalObject;
   begin
     TryChakraAPI('JsGetGlobalObject', JsGetGlobalObject(Result));
   end;
 
-  function GetObjectProperty(Instance, PropertyName: TJsValue): TJsValue;
+  function GetValueType;
   begin
-    TryChakraAPI('JsObjectGetProperty', JsObjectGetProperty(Instance, PropertyName, Result));
-  end;
-
-  function GetProperty;
-  begin
-    Result := GetObjectProperty(Instance, StringAsJsString(PropertyName));
-  end;
-
-  function GetStringProperty;
-  begin
-    Result := JsStringAsString(GetProperty(Instance, PropertyName));
-  end;
-
-  function GetIntProperty;
-  begin
-    Result := JsNumberAsInt(GetProperty(Instance, PropertyName));
-  end;
-
-  procedure SetObjectProperty(Instance, PropertyName, Value: TJsValue);
-  begin
-    TryChakraAPI('JsObjectSetProperty', JsObjectSetProperty(Instance, PropertyName, Value, False));
-  end;
-
-  procedure SetProperty;
-  begin
-    SetObjectProperty(Instance, StringAsJsString(PropertyName), Value);
+    TryChakraAPI('JsGetValueType', JsGetValueType(Value, Result));
   end;
 
   function JsValueAsJsString;
   begin
     TryChakraAPI('JsConvertValueToString', JsConvertValueToString(Value, Result));
-  end;
-
-  function JsValueAsString;
-  begin
-    Result := JsStringAsString(JsValueAsJsString(Value));
   end;
 
   function JsStringLength(Value: TJsValue): Integer;
@@ -117,6 +85,11 @@ implementation
     end;
   end;
 
+  function JsValueAsString;
+  begin
+    Result := JsStringAsString(JsValueAsJsString(Value));
+  end;
+
   function StringAsJsString;
   const
     Null: WideChar = #0;
@@ -130,6 +103,26 @@ implementation
     TryChakraAPI('JsCreateStringUtf16', JsCreateStringUtf16(P, Length(Value), Result));
   end;
 
+  function GetObjectProperty(Instance, PropertyName: TJsValue): TJsValue;
+  begin
+    TryChakraAPI('JsObjectGetProperty', JsObjectGetProperty(Instance, PropertyName, Result));
+  end;
+
+  function GetProperty;
+  begin
+    Result := GetObjectProperty(Instance, StringAsJsString(PropertyName));
+  end;
+
+  function GetStrProperty;
+  begin
+    Result := JsStringAsString(GetProperty(Instance, PropertyName));
+  end;
+
+  function GetIntProperty;
+  begin
+    Result := JsNumberAsInt(GetProperty(Instance, PropertyName));
+  end;
+
   function IntAsJsNumber;
   begin
     TryChakraAPI('JsIntToNumber', JsIntToNumber(Value, Result));
@@ -140,57 +133,14 @@ implementation
     TryChakraAPI('JsNumberToInt', JsNumberToInt(Value, Result));
   end;
 
-  function BooleanAsJsBoolean;
+  procedure SetObjectProperty(Instance, PropertyName, Value: TJsValue);
   begin
-    TryChakraAPI('JsBoolToBoolean', JsBoolToBoolean(Value, Result));
+    TryChakraAPI('JsObjectSetProperty', JsObjectSetProperty(Instance, PropertyName, Value, False));
   end;
 
-  function JsBooleanAsBoolean;
-  var
-    B: ByteBool;
+  procedure SetProperty;
   begin
-    TryChakraAPI('JsBooleanToBool', JsBooleanToBool(Value, B));
-    Result := B;
-  end;
-
-  function GetValueType;
-  begin
-    TryChakraAPI('JsGetValueType', JsGetValueType(Value, Result));
-  end;
-
-  function FunctionCallback(Callee: TJsValue; IsConstructCall: ByteBool; Args: PJsValue; ArgCount: Word; Callback: Pointer): TJsValue; stdcall;
-  var
-    Fn: TJsFunctionFunc;
-  begin
-    Fn := Callback;
-
-    Inc(Args); Dec(ArgCount);
-
-    Result := Fn(Args, ArgCount);
-  end;
-
-  function CreateNamedFunction(FunctionName: TJsValue; Callback: TJsFunctionFunc): TJsValue;
-  begin
-    TryChakraAPI('JsCreateNamedFunction', JsCreateNamedFunction(FunctionName, FunctionCallback, @Callback, Result));
-  end;
-
-  function CallFunction;
-  begin
-    TryChakraAPI('JsCallFunction', JsCallFunction(Func, Args, ArgCount, Result));
-  end;
-
-  procedure SetFunction;
-  var
-    Fn, Name: TJsValue;
-  begin
-    Name := StringAsJsString(FunctionName);
-    Fn := CreateNamedFunction(Name, Callback);
-    SetObjectProperty(Instance, Name, Fn);
-  end;
-
-  function CreateObject;
-  begin
-    TryChakraAPI('JsCreateObject', JsCreateObject(Result));
+    SetObjectProperty(Instance, StringAsJsString(PropertyName), Value);
   end;
 
   function CreateExternalArrayBuffer(Value: WideString): TJsValue;
@@ -200,7 +150,6 @@ implementation
       'JsCreateExternalArrayBuffer',
 
       JsCreateExternalArrayBuffer(
-        //Pointer(PWideChar(Value)),
         PWideChar(Value),
         Length(Value) * SizeOf(WideChar),
         Nil, Nil,
@@ -210,7 +159,7 @@ implementation
 
   end;
 
-  function EvalScriptSource;
+  function Run;
   var
     Source, URL: TJsValue;
   begin
@@ -218,11 +167,6 @@ implementation
     URL := StringAsJsString(ScriptName);
 
     TryChakraAPI('JsRun', JsRun(Source, SourceContext, URL, [psaUtf16Encoded], Result));
-  end;
-
-  function Undefined;
-  begin
-    TryChakraAPI('JsGetUndefinedValue', JsGetUndefinedValue(Result));
   end;
 
   function JsTypeName;
@@ -244,6 +188,41 @@ implementation
     end;
   end;
 
+  function CreateObject;
+  begin
+    TryChakraAPI('JsCreateObject', JsCreateObject(Result));
+  end;
+
+  function FunctionCallback(Callee: TJsValue; IsConstructCall: ByteBool; Args: PJsValue; ArgCount: Word; Callback: Pointer): TJsValue; stdcall;
+  var
+    Fn: TJsFunctionFunc;
+  begin
+    Fn := Callback;
+
+    Inc(Args); Dec(ArgCount);
+
+    Result := Fn(Args, ArgCount);
+  end;
+
+  function CreateNamedFunction(FunctionName: TJsValue; Callback: TJsFunctionFunc): TJsValue;
+  begin
+    TryChakraAPI('JsCreateNamedFunction', JsCreateNamedFunction(FunctionName, FunctionCallback, @Callback, Result));
+  end;
+
+  procedure SetFunction;
+  var
+    Fn, Name: TJsValue;
+  begin
+    Name := StringAsJsString(FunctionName);
+    Fn := CreateNamedFunction(Name, Callback);
+    SetObjectProperty(Instance, Name, Fn);
+  end;
+
+  function Undefined;
+  begin
+    TryChakraAPI('JsGetUndefinedValue', JsGetUndefinedValue(Result));
+  end;
+
   function CreateArray;
   begin
     TryChakraAPI('JsCreateArray', JsCreateArray(ItemCount, Result));
@@ -257,6 +236,19 @@ implementation
   procedure SetArrayItem;
   begin
     TryChakraAPI('JsSetIndexedProperty', JsSetIndexedProperty(ArrayValue, IntAsJsNumber(ItemIndex), Value));
+  end;
+
+  function BooleanAsJsBoolean;
+  begin
+    TryChakraAPI('JsBoolToBoolean', JsBoolToBoolean(Value, Result));
+  end;
+
+  function JsBooleanAsBoolean;
+  var
+    B: ByteBool;
+  begin
+    TryChakraAPI('JsBooleanToBool', JsBooleanToBool(Value, B));
+    Result := B;
   end;
 
 end.
