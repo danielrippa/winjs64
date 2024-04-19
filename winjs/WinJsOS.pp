@@ -7,7 +7,7 @@ interface
   uses
     ChakraTypes;
 
-  function GetWinJsOS: TJsValue;
+  function GetWinJsOSInstance: TJsValue;
 
 implementation
 
@@ -29,7 +29,7 @@ implementation
     Result := IntAsJsNumber(Milliseconds);
   end;
 
-  function GetWinJsOS;
+  function GetWinJsOSInstance;
   begin
     Result := CreateObject;
 

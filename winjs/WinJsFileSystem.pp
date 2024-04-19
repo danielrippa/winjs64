@@ -12,7 +12,7 @@ interface
 implementation
 
   uses
-    Chakra, ChakraErr, SysUtils, WinJsUtils;
+    Chakra, ChakraError, SysUtils, WinJsUtils;
 
   function FsFileExists(Args: PJsValue; ArgCount: Word): TJsValue;
   var
@@ -55,7 +55,7 @@ implementation
     aFileName := JsStringAsString(Args^);
     if not FileExists(aFileName) then Exit;
 
-    Result := StringAsJsString(ReadUnicodeTextFileContent(aFileName));
+    Result := StringAsJsString(ReadTextFile(aFileName));
   end;
 
   function GetWinJsFileSystem;

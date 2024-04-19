@@ -16,90 +16,19 @@ interface
         FGlobal: TJsValue;
 
         FSourceContext: UIntPtr;
-
-        function GetGlobal: TJsValue;
       public
         procedure Init;
-        function EvalScriptSource(aScriptName, aScriptSource: WideString): TJsValue;
-        property Global: TJsValue read GetGlobal;
+        function RunScriptSource(aScriptSource, aScriptName: WideString): TJsValue;
+        property Global: TJsValue read FGlobal;
     end;
 
-  var Runtime: TWinJsRuntime;
+  var
+    Runtime: TWinJsRuntime;
 
 implementation
 
   uses
-    ChakraAPI, Chakra, WinJsProcess, WinjsUtils, WinJsErr, SysUtils, WinJsOS;
-
-  var WinJsLibraryHandles: array of TLibHandle;
-
-  function WinJsLoadScript(Args: PJsValue; ArgCount: Word): TJsValue;
-  var
-    aFilePath, aScriptName: WideString;
-  begin
-    CheckParams('loadScript', Args, ArgCount, [jsString, jsString], 1);
-
-    aFilePath := JsStringAsString(Args^); Inc(Args);
-
-    aScriptName := '';
-
-    if ArgCount > 1 then begin
-      aScriptName := JsStringAsString(Args^);
-    end;
-
-    Result := LoadScript(aFilePath, aScriptName);
-  end;
-
-  function LoadWinJsLibrary(FilePath: WideString): TJsValue;
-  type
-    TGetJsValue = function: TJsValue;
-  var
-    L: Integer;
-    Handle: TLibHandle;
-    GetJsValue: TGetJsValue;
-  begin
-    L := Length(WinJsLibraryHandles);
-    SetLength(WinJsLibraryHandles, L + 1);
-
-    Handle := WinjsUtils.LoadLibrary(FilePath);
-
-    WinJsLibraryHandles[L] := Handle;
-
-    GetJsValue := GetProcAddress(Handle, 'GetJsValue');
-
-    if Assigned(GetJsValue) then begin
-      Result := GetJsValue;
-    end else begin
-      raise EWinJsException.Create(Format('Missing GetJsValue export in ''%s'' library', [FilePath]), 0);
-    end;
-
-  end;
-
-  function WinjsLoadLibrary(Args: PJsValue; ArgCount: Word): TJsValue;
-  var
-    aFilePath: WideString;
-  begin
-    CheckParams('loadLibrary', Args, ArgCount, [jsString], 1);
-    aFilePath := JsStringAsString(Args^);
-    Result := LoadWinJsLibrary(aFilePath);
-  end;
-
-  function WinjsLoadWasm(Args: PJsValue; ArgCount: Word): TJsValue;
-  begin
-    CheckParams('loadWasm', Args, ArgCount, [jsString], 1);
-    Result := LoadWasm(JsStringAsString(Args^));
-  end;
-
-  function GetWinJs: TJsValue;
-  begin
-    Result := CreateObject;
-
-    SetFunction(Result, 'loadScript', WinJsLoadScript);
-    SetFunction(Result, 'loadLibrary', WinJsLoadLibrary);
-    SetFunction(Result, 'loadWasm', WinJsLoadWasm);
-
-    SetProperty(Result, 'process', GetWinJsProcess);
-  end;
+    Chakra, ChakraError, ChakraAPI, WinJsInstance, WinJsOS;
 
   procedure TWinJsRuntime.Init;
   const
@@ -109,19 +38,16 @@ implementation
     TryChakraAPI('JsCreateContext', JsCreateContext(FRuntime, FContext));
     TryChakraAPI('JsSetCurrentContext', JsSetCurrentContext(FContext));
 
-    SetProperty(Global, 'winjs', GetWinJs);
-    SetProperty(Global, 'os', GetWinJsOS);
+    FGlobal := GetGlobalObject;
+
+    SetProperty(FGlobal, 'winjs', GetWinJsInstance);
+    SetProperty(FGlobal, 'os', GetWinJsOsInstance);
   end;
 
-  function TWinJsRuntime.GetGlobal;
-  begin
-    Result := GetGlobalObject;
-  end;
-
-  function TWinJsRuntime.EvalScriptSource;
+  function TWinJsRuntime.RunScriptSource;
   begin
     Inc(FSourceContext);
-    Result := Chakra.EvalScriptSource(FSourceContext, aScriptSource, aScriptName);
+    Result := Chakra.Run(FSourceContext, aScriptSource, aScriptName);
   end;
 
 initialization
