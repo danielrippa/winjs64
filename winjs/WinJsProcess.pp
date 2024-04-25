@@ -102,9 +102,9 @@ implementation
     SetFunction(Result, 'stdout', ProcessIOStdOut);
     SetFunction(Result, 'stderr', ProcessIOStdErr);
 
-    SetFunction(Result, 'getStdIn', ProcessIOStdIn);
+    SetFunction(Result, 'getStdin', ProcessIOStdIn);
 
-    SetFunction(Result, 'readln', ProcessIOReadln);
+    SetFunction(Result, 'readLn', ProcessIOReadln);
 
     SetFunction(Result, 'debug', ProcessIODebug);
   end;
