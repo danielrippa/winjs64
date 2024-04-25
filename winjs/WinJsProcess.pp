@@ -56,6 +56,14 @@ implementation
     Write(JsValueAsString(Args^));
   end;
 
+  function ProcessIOStdErr(Args: PJsValue; ArgCount: Word): TJsValue;
+  begin
+    Result := Undefined;
+    CheckParams('process.io.stderr', Args, ArgCount, [], 1);
+
+    Write(StdErr, JsValueAsString(Args^));
+  end;
+
   function ProcessIODebug(Args: PJsValue; ArgCount: Word): TJsValue;
   begin
     Result := Undefined;
@@ -72,11 +80,30 @@ implementation
     Result := StringAsJsString(Value);
   end;
 
+  function ProcessIOStdIn(Args: PJsValue; ArgCount: Word): TJsValue;
+  var
+    StandardInput: WideString;
+    Character: Char;
+  begin
+    StandardInput := '';
+
+    while not EOF(Input) do begin
+      Read(Character);
+      StandardInput := StandardInput + Character;
+    end;
+
+    Result := StringAsJsString(StandardInput);
+  end;
+
   function GetWinJsProcessIO: TJsValue;
   begin
     Result := CreateObject;
 
     SetFunction(Result, 'stdout', ProcessIOStdOut);
+    SetFunction(Result, 'stderr', ProcessIOStdErr);
+
+    SetFunction(Result, 'getStdIn', ProcessIOStdIn);
+
     SetFunction(Result, 'readln', ProcessIOReadln);
 
     SetFunction(Result, 'debug', ProcessIODebug);
