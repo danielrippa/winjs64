@@ -4,6 +4,9 @@ unit ChakraTypes;
 
 interface
 
+  const
+    EnableExperimentalFeatures = $00000020;
+
   type
 
     TJsValue = ^TJsHandle;

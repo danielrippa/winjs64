@@ -10,7 +10,11 @@ interface
     ChakraTypes;
 
   const
-    dll = 'ChakraCore_x64.dll';
+    {$IFDEF CPU64}
+      dll = 'ChakraCore_x64.dll';
+    {$ELSE}
+      dll = 'ChakraCore.dll';
+    {$ENDIF}
 
   function JsCreateRuntime(Attributes: Cardinal; ThreadService: TJsThreadServiceFunc; out Runtime: TJsValue): TJsErrorCode; external dll;
   function JsCreateContext(Runtime: TJsValue; out NewContext: TJsValue): TJsErrorCode; external dll;
