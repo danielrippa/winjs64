@@ -5,37 +5,157 @@ unit WinJsUtils;
 interface
 
   uses
-    ChakraTypes;
+    ChakraTypes, WinJsError;
 
   function RunJsFile(aScriptFilePath: WideString): Integer;
 
-  function FileNameWithoutExtension(aFilePath: WideString): WideString;
+  procedure WinJsUsage;
 
   function ReadTextFile(aFilePath: WideString): WideString;
 
   procedure Debug(aMessage: WideString);
 
+  function LoadWasm(aFilePath: WideString): TJsValue;
+
+  function LoadWinJsLibrary(aFilePath: WideString): TJsValue;
+
+  function NowAsMilliseconds: Integer;
+
 implementation
 
   uses
-    WinJsRuntime, SysUtils, StrUtils, Classes, Windows, Chakra, WinJsError, ChakraError;
+    DynLibs, DateUtils, SysUtils, StrUtils, Classes, Windows, Chakra, WinJsRuntime, ChakraError;
+
+  function NowAsMilliseconds;
+  var
+    UnixEpoch: TDateTime;
+  begin
+    UnixEpoch := EncodeDate(1970, 1, 1);
+    Result := MillisecondsBetween(Now, UnixEpoch);
+  end;
 
   procedure WriteErrLn(aFormat: WideString; aArgs: array of const);
   begin
     WriteLn(StdErr, WideFormat(aFormat, aArgs));
   end;
 
+  function FilenameWithoutExtension(aFilePath: WideString): WideString;
+  var
+    Extension: WideString;
+  begin
+    Extension := ExtractFileExt(aFilePath);
+
+    if Extension <> '' then begin
+      Result := ExtractFileName(Copy(aFilePath, 1, RPos(Extension, aFilePath) - 1));
+    end else begin
+      Result := ExtractFileName(aFilePath);
+    end;
+  end;
+
+  procedure WinJsUsage;
+  begin
+    WriteErrLn('Usage:', []);
+    WriteErrln('%s jsFilePath', [ FilenameWithoutExtension(ParamStr(0)) ]);
+  end;
+
+  function ReadTextFile;
+  var
+    FileStream: TFileStream;
+    S: UTF8String;
+  begin
+    Result := '';
+
+    FileStream := TFileStream.Create(aFilePath, fmOpenRead);
+    try
+
+      if FileStream.Size = 0 then Exit;
+
+      with FileStream do begin
+        SetLength(S, Size);
+        Read(S[1], Size);
+
+        Result := UTF8String(S);
+
+      end;
+
+    finally
+      FileStream.Free;
+    end;
+
+  end;
+
+  procedure Debug;
+  begin
+    OutputDebugStringW(PWideChar(aMessage));
+  end;
+
+  function LoadWasm(aFilePath: WideString): TJsValue;
+  begin
+    Result := StringAsJsString(ReadTextFile(aFilePath));
+  end;
+
+  function LoadLibrary(aFilePath: WideString): THandle;
+  var
+    Handle: THandle;
+    LastError: DWORD;
+    ErrorMessage: String;
+  begin
+
+    Handle := DynLibs.LoadLibrary(PChar(aFilePath));
+
+    if Handle = 0 then begin
+      LastError := GetLastError();
+      ErrorMessage := SysErrorMessage(LastError);
+
+      raise Exception.CreateFmt('%s ''%s''', [ErrorMessage, aFilePath]);
+    end;
+
+    Result := Handle;
+  end;
+
+  var WinJsLibraryHandles: array of TLibHandle;
+
+  function LoadWinJsLibrary;
+  type
+    TGetJsValue = function: TJsValue;
+  var
+    L: Integer;
+    Handle: TLibHandle;
+    GetJsValue: TGetJsValue;
+  begin
+
+    L := Length(WinJsLibraryHandles);
+    SetLength(WinJsLibraryHandles, L + 1);
+
+    Handle := LoadLibrary(aFilePath);
+
+    WinJsLibraryHandles[L] := Handle;
+
+    GetJsValue := GetProcAddress(Handle, 'GetJsValue');
+
+    if Assigned(GetJsValue) then begin
+      Result := GetJsValue;
+    end else begin
+      raise EWinJsException.Create(Format('Missing GetJsValue export in ''%s'' library', [aFilePath]), 0);
+    end;
+
+  end;
+
   function RunJsFile;
   var
     ErrorLevel: TJsValue;
+    ScriptSource, ScriptName: WideString;
   begin
-
     Result := 0;
 
     try
 
       with Runtime do begin
-        RunScriptSource(ReadTextFile(aScriptFilePath), WideFormat('%s %s', [ ParamStr(0), aScriptFilePath ]));
+        ScriptSource := ReadTextFile(aScriptFilePath);
+        ScriptName := aScriptFilePath;
+
+        RunScriptSource(ScriptSource, ScriptName);
+
         ErrorLevel := GetProperty(Global, 'errorLevel');
       end;
 
@@ -78,55 +198,6 @@ implementation
 
     end;
 
-  end;
-
-  function FileNameWithoutExtension;
-  var
-    Extension: WideString;
-  begin
-    Extension := ExtractFileExt(aFilePath);
-
-    if Extension <> '' then begin
-      Result := ExtractFileName(
-        Copy(
-          aFilePath, 1, RPos(Extension, aFilePath) - 1
-        )
-      );
-    end else begin
-      Result := ExtractFileName(aFilePath);
-    end;
-
-  end;
-
-  function ReadTextFile;
-  var
-    FileStream: TFileStream;
-    S: UTF8String;
-  begin
-
-    Result := '';
-
-    FileStream := TFileStream.Create(aFilePath, fmOpenRead);
-    try
-
-      if FileStream.Size = 0 then Exit;
-
-      with FileStream do begin
-        SetLength(S, Size);
-        Read(S[1], Size);
-
-        Result := UTF8Decode(S);
-      end;
-
-    finally
-      FileStream.Free;
-    end;
-
-  end;
-
-  procedure Debug;
-  begin
-    OutputDebugStringW(PWideChar(aMessage));
   end;
 
 end.

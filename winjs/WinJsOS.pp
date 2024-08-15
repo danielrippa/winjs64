@@ -7,12 +7,12 @@ interface
   uses
     ChakraTypes;
 
-  function GetWinJsOSInstance: TJsValue;
+  function GetWinJsOS: TJsValue;
 
 implementation
 
   uses
-    Chakra, WinJsFileSystem, SysUtils, DateUtils;
+    Chakra, WinJsFileSystem, SysUtils, DateUtils, WinJsUtils;
 
   function OSNow(Args: PJsValue; ArgCount: Word): TJsValue;
   begin
@@ -20,16 +20,11 @@ implementation
   end;
 
   function OSNowAsMilliseconds(Args: PJsValue; ArgCount: Word): TJsValue;
-  var
-    UnixEpoch: TDateTime;
-    Milliseconds: Integer;
   begin
-    UnixEpoch := EncodeDate(1970, 1, 1);
-    Milliseconds := MillisecondsBetween(Now, UnixEpoch);
-    Result := IntAsJsNumber(Milliseconds);
+    Result := IntAsJsNumber(NowAsMilliseconds);
   end;
 
-  function GetWinJsOSInstance;
+  function GetWinJsOS;
   begin
     Result := CreateObject;
 
