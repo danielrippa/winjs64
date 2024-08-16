@@ -94,14 +94,17 @@ implementation
     Result := StringAsJsString(ReadTextFile(aFilePath));
   end;
 
-  function LoadLibrary(aFilePath: WideString): THandle;
+  function TryLoadLibrary(aFilePath: WideString): THandle;
   var
     Handle: THandle;
     LastError: DWORD;
     ErrorMessage: String;
+    FilePath: String;
   begin
 
-    Handle := DynLibs.LoadLibrary(PChar(aFilePath));
+    FilePath := aFilePath;
+
+    Handle := LoadLibrary(PChar(FilePath));
 
     if Handle = 0 then begin
       LastError := GetLastError();
@@ -127,7 +130,7 @@ implementation
     L := Length(WinJsLibraryHandles);
     SetLength(WinJsLibraryHandles, L + 1);
 
-    Handle := LoadLibrary(aFilePath);
+    Handle := TryLoadLibrary(aFilePath);
 
     WinJsLibraryHandles[L] := Handle;
 
