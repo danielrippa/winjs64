@@ -10,11 +10,7 @@ interface
     ChakraTypes;
 
   const
-    {$IFDEF CPU64}
-      dll = 'ChakraCore_x64.dll';
-    {$ELSE}
-      dll = 'ChakraCore.dll';
-    {$ENDIF}
+    dll = 'ChakraCore_x64.dll';
 
   function JsCreateRuntime(Attributes: Cardinal; ThreadService: TJsThreadServiceFunc; out Runtime: TJsValue): TJsErrorCode; external dll;
   function JsCreateContext(Runtime: TJsValue; out NewContext: TJsValue): TJsErrorCode; external dll;
@@ -57,6 +53,8 @@ interface
   function JsCopyStringUtf16(Value: TJsValue; Start: Integer; Length: Integer; Buffer: PUnicodeChar; Written: PNativeUInt): TJsErrorCode; external dll;
 
   function JsConvertValueToString(Value: TJsValue; out StringValue: TJsValue): TJsErrorCode; external dll;
+
+  function JsCallFunction(Func: TJsValue; Args: PJsValue; ArgCount: Word; out ResultValue: TJsValue): TJsErrorCode; external dll;
 
 implementation
 

@@ -44,6 +44,8 @@ interface
 
   function JsTypeName(Value: TJsValueType): WideString;
 
+  function CallFunction(Func: TJsValue; Args: PJsValue; ArgCount: Word): TJsValue;
+
 implementation
 
   uses
@@ -249,6 +251,11 @@ implementation
   begin
     TryChakraAPI('JsBooleanToBool', JsBooleanToBool(Value, B));
     Result := B;
+  end;
+
+  function CallFunction;
+  begin
+    TryChakraAPI('JsCallFunction', JsCallFunction(Func, Args, ArgCount, Result));
   end;
 
 end.
