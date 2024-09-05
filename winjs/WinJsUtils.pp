@@ -65,22 +65,19 @@ implementation
   begin
     Result := '';
 
-    FileStream := TFileStream.Create(aFilePath, fmOpenRead);
-    try
+    FileStream := TFileStream.Create(aFilePath, fmOpenRead or fmShareDenyNone);
 
-      if FileStream.Size = 0 then Exit;
+    if FileStream.Size = 0 then Exit;
 
-      with FileStream do begin
-        SetLength(S, Size);
-        Read(S[1], Size);
+    with FileStream do begin
+      SetLength(S, Size);
+      Read(S[1], Size);
 
-        Result := UTF8String(S);
+      Result := UTF8String(S);
 
-      end;
-
-    finally
-      FileStream.Free;
     end;
+
+    FileStream.Free;
 
   end;
 
@@ -149,6 +146,7 @@ implementation
     ErrorLevel: TJsValue;
     ScriptSource, ScriptName: WideString;
   begin
+
     Result := 0;
 
     try
