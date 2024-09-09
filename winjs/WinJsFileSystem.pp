@@ -58,6 +58,12 @@ implementation
     Result := StringAsJsString(ReadTextFile(aFileName));
   end;
 
+  function FsGetPath(Args: PJsValue; ArgCount: Word): TJsValue;
+  begin
+    CheckParams('getPath', Args, ArgCount, [jsString], 1);
+    Result := StringAsJsString(ExtractFilePath(JsStringAsString(Args^)));
+  end;
+
   function GetWinJsFileSystem;
   begin
     Result := CreateObject;
@@ -66,6 +72,7 @@ implementation
     SetFunction(Result, 'folderExists', FsFolderExists);
     SetFunction(Result, 'getCurrentFolder', FsGetCurrentFolder);
     SetFunction(Result, 'setCurrentFolder', FsSetCurrentFolder);
+    SetFunction(Result, 'getPath', FsGetPath);
     SetFunction(Result, 'readTextFile', FsReadTextFile);
   end;
 
