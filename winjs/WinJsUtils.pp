@@ -21,6 +21,8 @@ interface
 
   function NowAsMilliseconds: Integer;
 
+  procedure Quit(AErrorLevel: Integer);
+
 implementation
 
   uses
@@ -199,6 +201,11 @@ implementation
 
     end;
 
+  end;
+
+  procedure Quit;
+  begin
+    Halt(AErrorLevel);
   end;
 
 end.

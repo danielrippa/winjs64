@@ -12,7 +12,7 @@ interface
 implementation
 
   uses
-    Chakra, SysUtils, ChakraError, WinJsUtils;
+    Chakra, SysUtils, ChakraError, WinJsUtils, Windows;
 
   function GetArgs: TJsValue;
   var
@@ -46,6 +46,13 @@ implementation
     Result := Undefined;
     CheckParams('sleep', Args, ArgCount, [jsNumber], 1);
     Sleep(JsNumberAsInt(Args^));
+  end;
+
+  function ProcessQuit(Args: PJsValue; ArgCount: Word): TJsValue;
+  begin
+    Result := Undefined;
+    CheckParams('quit', Args, ArgCount, [jsNumber], 1);
+    Quit(JsNumberAsInt(Args^));
   end;
 
   function ProcessIOStdOut(Args: PJsValue; ArgCount: Word): TJsValue;
@@ -95,12 +102,36 @@ implementation
     Result := StringAsJsString(StandardInput);
   end;
 
+  function ProcessIOSetTerminalMode(Args: PJsValue; ArgCount: Word): TJsValue;
+  var
+    h: THandle;
+    lwMode: LongWord;
+    Enable: Boolean;
+  begin
+    CheckParams('process.io.setTerminalMode', Args, ArgCount, [jsBoolean], 1);
+
+    Enable := JsBooleanAsBoolean(Args^);
+
+    h := GetStdHandle(STD_OUTPUT_HANDLE);
+    GetConsoleMode(h, @lwMode);
+
+    if Enable then begin
+      lwMode := lwMode or ENABLE_VIRTUAL_TERMINAL_PROCESSING;
+    end else begin
+      lwMode := lwMode and not ENABLE_VIRTUAL_TERMINAL_PROCESSING;
+    end;
+
+    Result := BooleanAsJsBoolean(SetConsoleMode(h, lwMode));
+  end;
+
   function GetWinJsProcessIO: TJsValue;
   begin
     Result := CreateObject;
 
     SetFunction(Result, 'stdout', ProcessIOStdOut);
     SetFunction(Result, 'stderr', ProcessIOStdErr);
+
+    SetFunction(Result, 'setTerminalMode', ProcessIOSetTerminalMode);
 
     SetFunction(Result, 'getStdin', ProcessIOStdIn);
 
@@ -117,6 +148,7 @@ implementation
     SetProperty(Result, 'envVars', GetEnvVars);
 
     SetFunction(Result, 'sleep', ProcessSleep);
+    SetFunction(Result, 'quit', ProcessQuit);
 
     SetProperty(Result, 'io', GetWinJsProcessIO);
   end;
