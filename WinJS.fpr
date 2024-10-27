@@ -6,10 +6,11 @@ uses
 begin
 
   if ParamCount > 0 then begin
+    SetTerminalMode(True);
     ExitCode := RunJsFile(ParamStr(1));
   end else begin
     WriteLn('Usage:');
-    WriteLn(ExtractFileNameWithoutExt(ParamStr(0)), ' JsFilePath');
+    WriteLn(FilenameWithoutExtension(ParamStr(0)), ' JsFilePath');
   end;
 
 end.
