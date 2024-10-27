@@ -4,7 +4,7 @@ unit ChakraTypes;
 
 interface
 
-const
+  const
     EnableExperimentalFeatures = $00000020;
 
   type
