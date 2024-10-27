@@ -23,7 +23,11 @@ interface
 
   procedure Quit(AErrorLevel: Integer);
 
-implementation
+  function SetTerminalMode(AEnable: Boolean): Boolean;
+
+  function FilenameWithoutExtension(aFilePath: WideString): WideString;
+
+  implementation
 
   uses
     DynLibs, DateUtils, SysUtils, StrUtils, Classes, Windows, Chakra, WinJsRuntime, ChakraError;
@@ -41,7 +45,7 @@ implementation
     WriteLn(StdErr, WideFormat(aFormat, aArgs));
   end;
 
-  function FilenameWithoutExtension(aFilePath: WideString): WideString;
+  function FilenameWithoutExtension;
   var
     Extension: WideString;
   begin
@@ -206,6 +210,25 @@ implementation
   procedure Quit;
   begin
     Halt(AErrorLevel);
+  end;
+
+  function SetTerminalMode;
+  var
+    h: THandle;
+    lwMode: LongWord;
+    Enable: Boolean;
+  begin
+
+    h := GetStdHandle(STD_OUTPUT_HANDLE);
+    GetConsoleMode(h, @lwMode);
+
+    if AEnable then begin
+      lwMode := lwMode or ENABLE_VIRTUAL_TERMINAL_PROCESSING;
+    end else begin
+      lwMode := lwMode and not ENABLE_VIRTUAL_TERMINAL_PROCESSING;
+    end;
+
+    Result := SetConsoleMode(h, lwMode);
   end;
 
 end.

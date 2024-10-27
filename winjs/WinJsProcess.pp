@@ -112,16 +112,7 @@ implementation
 
     Enable := JsBooleanAsBoolean(Args^);
 
-    h := GetStdHandle(STD_OUTPUT_HANDLE);
-    GetConsoleMode(h, @lwMode);
-
-    if Enable then begin
-      lwMode := lwMode or ENABLE_VIRTUAL_TERMINAL_PROCESSING;
-    end else begin
-      lwMode := lwMode and not ENABLE_VIRTUAL_TERMINAL_PROCESSING;
-    end;
-
-    Result := BooleanAsJsBoolean(SetConsoleMode(h, lwMode));
+    Result := BooleanAsJsBoolean(SetTerminalMode(Enable));
   end;
 
   function GetWinJsProcessIO: TJsValue;
