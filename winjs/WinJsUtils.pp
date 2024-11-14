@@ -113,7 +113,7 @@ interface
       LastError := GetLastError();
       ErrorMessage := SysErrorMessage(LastError);
 
-      raise Exception.CreateFmt('%s ''%s''', [ErrorMessage, aFilePath]);
+      ThrowError('%s ''%s''', [ErrorMessage, aFilePath]);
     end;
 
     Result := Handle;
@@ -135,14 +135,18 @@ interface
 
     Handle := TryLoadLibrary(aFilePath);
 
-    WinJsLibraryHandles[L] := Handle;
+    if Handle <> 0 then begin
 
-    GetJsValue := GetProcAddress(Handle, 'GetJsValue');
+      WinJsLibraryHandles[L] := Handle;
 
-    if Assigned(GetJsValue) then begin
-      Result := GetJsValue;
-    end else begin
-      raise EWinJsException.Create(Format('Missing GetJsValue export in ''%s'' library', [aFilePath]), 0);
+      GetJsValue := GetProcAddress(Handle, 'GetJsValue');
+
+      if Assigned(GetJsValue) then begin
+        Result := GetJsValue;
+      end else begin
+        ThrowError('Missing GetJsValue export in ''%s'' library', [aFilePath]);
+      end;
+
     end;
 
   end;
